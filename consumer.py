@@ -1,19 +1,29 @@
-from kafka import KafkaConsumer
+from kafka import KafkaConsumer, KafkaProducer
 from const import *
 import sys
 
-# Create consumer: Option 1 -- only consume new events
-consumer = KafkaConsumer(bootstrap_servers=[BROKER_ADDR + ':' + BROKER_PORT])
-
-# Create consumer: Option 2 -- consume old events (uncomment to test -- and comment Option 1 above)
-#consumer = KafkaConsumer(bootstrap_servers=[BROKER_ADDR + ':' + BROKER_PORT], auto_offset_reset='earliest')
-
 try:
-  topic = sys.argv[1]
+    topic_in = sys.argv[1]   
+    topic_out = sys.argv[2]  
 except:
-  print ('Usage: python3 consumer <topic_name>')
-  exit(1)
-  
-consumer.subscribe([topic])
+    print('Usage: python3 processor.py <topic_in> <topic_out>')
+    exit(1)
+
+# Inicializa o Consumidor e o Produtor
+consumer = KafkaConsumer(bootstrap_servers=[BROKER_ADDR + ':' + BROKER_PORT])
+producer = KafkaProducer(bootstrap_servers=[BROKER_ADDR + ':' + BROKER_PORT])
+
+consumer.subscribe([topic_in])
+
+print(f"Aguardando mensagens em {topic_in} para enviar para {topic_out}...")
+
 for msg in consumer:
-    print (msg.value)
+    # Lógica de Processamento
+    texto_original = msg.value.decode('utf-8')
+    texto_processado = f"Processado por Rafael: {texto_original}"
+    
+    print(f"Transformando: {texto_original} -> {texto_processado}")
+    
+    # Publica no novo tópico
+    producer.send(topic_out, value=texto_processado.encode('utf-8'))
+    producer.flush()
